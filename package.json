@@ -1,0 +1,13 @@
+{
+  "name": "simple-auth-portfolio",
+  "version": "1.0.0",
+  "description": "تسجيل دخول وصفحة إنجازات ولوحة مشرفين – متوافق مع Vercel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3"
+  }
+}
