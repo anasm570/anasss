@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة أنس فاروق - تسجيل الدخول والإنجازات</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(145deg, #0a1f2e, #07141f);
+            font-family: 'Cairo', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            color: #eef4ff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(12px);
+            border-radius: 60px;
+            padding: 30px;
+            border: 1px solid #ffcc88;
+        }
+        /* أنماط مشتركة */
+        .section-title {
+            font-size: 1.5rem;
+            border-right: 5px solid #e94560;
+            padding-right: 15px;
+            margin: 30px 0 20px;
+        }
+        .skills-grid, .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        .card {
+            background: rgba(0,0,0,0.5);
+            border-radius: 40px;
+            padding: 20px;
+            border: 1px solid #ffaa55;
+            transition: 0.2s;
+        }
+        .card:hover { transform: translateY(-5px); border-color: #e94560; }
+        .card h3 { color: #ffdd99; margin-bottom: 10px; }
+        .badge { background: #e94560; display: inline-block; padding: 4px 12px; border-radius: 30px; font-size: 0.7rem; margin-top: 10px; }
+        .contact { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ffaa55; }
+        .logout-btn, .admin-btn {
+            background: #e94560;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+        }
+        .admin-btn { background: #2a6b9e; margin-left: 10px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        /* شاشات تسجيل الدخول */
+        .auth-box {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 40px;
+            color: #aaccee;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .tab-btn.active {
+            background: #e94560;
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 60px;
+            border: none;
+            background: #1e2e3a;
+            color: white;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            background: #e94560;
+            border: none;
+            padding: 14px;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .message { margin-top: 15px; text-align: center; font-size: 0.85rem; }
+        /* لوحة المشرف */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ffaa55;
+            text-align: center;
+        }
+        th { background: #e94560; }
+        footer { text-align: center; margin-top: 30px; font-size: 0.7rem; color: #7e9ab5; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container" id="app">
+    <!-- سيتم ملء المحتوى ديناميكياً بواسطة JavaScript -->
+</div>
+
+<script>
+    // حالة التطبيق
+    let currentView = 'auth'; // auth, portfolio, admin
+    let loggedInUser = null;
+    let adminLoggedIn = false;
+
+    // العنصر الرئيسي
+    const appDiv = document.getElementById('app');
+
+    // دوال مساعدة لعرض الرسائل (تستخدم في auth)
+    function showMessage(containerId, text, isError = false) {
+        const msgDiv = document.getElementById(containerId);
+        if (msgDiv) {
+            msgDiv.innerHTML = `<span style="color:${isError ? '#ffaaaa' : '#aaffaa'}">${text}</span>`;
+            setTimeout(() => { if (msgDiv.innerHTML.includes(text)) msgDiv.innerHTML = ''; }, 3000);
+        }
+    }
+
+    // ------------------- واجهة المصادقة (تسجيل الدخول / إنشاء حساب) -------------------
+    function renderAuth() {
+        appDiv.innerHTML = `
+            <div class="auth-box">
+                <h1 style="text-align:center; color:#ffdd99;">🔐 منصة أنس فاروق</h1>
+                <div class="sub" style="text-align:center; color:#aaccee; margin-bottom:25px;">تسجيل الدخول أو إنشاء حساب جديد</div>
+
+                <div class="tab-buttons">
+                    <button class="tab-btn active" id="loginTab">تسجيل الدخول</button>
+                    <button class="tab-btn" id="registerTab">إنشاء حساب</button>
+                </div>
+
+                <div id="loginForm">
+                    <div class="form-group"><input type="email" id="loginEmail" placeholder="البريد الإلكتروني"></div>
+                    <div class="form-group"><input type="password" id="loginPassword" placeholder="كلمة المرور"></div>
+                    <button id="doLogin">دخول</button>
+                </div>
+
+                <div id="registerForm" style="display:none;">
+                    <div class="form-group"><input type="text" id="regName" placeholder="الاسم الكامل"></div>
+                    <div class="form-group"><input type="email" id="regEmail" placeholder="البريد الإلكتروني"></div>
+                    <div class="form-group"><input type="password" id="regPassword" placeholder="كلمة المرور"></div>
+                    <button id="doRegister">إنشاء حساب</button>
+                </div>
+
+                <div id="authMsg" class="message"></div>
+                <div style="text-align:center; margin-top:25px;">
+                    <button id="gotoAdminBtn" style="background:#2a6b9e; width:auto; padding:8px 20px;">👑 دخول المشرفين</button>
+                </div>
+                <footer>🔒 بياناتك محفوظة ولا يطلع عليها إلا المشرفون</footer>
+            </div>
+        `;
+
+        // تبديل التبويبات
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const authMsgDiv = document.getElementById('authMsg');
+
+        function showMessageAuth(text, isError) {
+            authMsgDiv.innerHTML = `<span style="color:${isError ? '#ffaaaa' : '#aaffaa'}">${text}</span>`;
+            setTimeout(() => { if (authMsgDiv.innerHTML.includes(text)) authMsgDiv.innerHTML = ''; }, 3000);
+        }
+
+        loginTab.onclick = () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            authMsgDiv.innerHTML = '';
+        };
+        registerTab.onclick = () => {
+            registerTab.classList.add('active');
+            loginTab.classList.remove('active');
+            registerForm.style.display = 'block';
+            loginForm.style.display = 'none';
+            authMsgDiv.innerHTML = '';
+        };
+
+        document.getElementById('doLogin').onclick = async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            if (!email || !password) { showMessageAuth('يرجى إدخال البريد وكلمة المرور', true); return; }
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMessageAuth(`✅ ${data.message}`, false);
+                    loggedInUser = { email, name: data.message.replace('مرحباً ', '') };
+                    setTimeout(() => checkSessionAndRender(), 1000);
+                } else {
+                    showMessageAuth(`❌ ${data.error}`, true);
+                }
+            } catch(e) { showMessageAuth('خطأ في الاتصال', true); }
+        };
+
+        document.getElementById('doRegister').onclick = async () => {
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+            if (!name || !email || !password) { showMessageAuth('جميع الحقول مطلوبة', true); return; }
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showMessageAuth(`✅ ${data.message} ، يمكنك الآن تسجيل الدخول`, false);
+                    loginTab.click();
+                    document.getElementById('loginEmail').value = email;
+                    document.getElementById('loginPassword').value = '';
+                } else {
+                    showMessageAuth(`❌ ${data.error}`, true);
+                }
+            } catch(e) { showMessageAuth('خطأ في الاتصال', true); }
+        };
+
+        document.getElementById('gotoAdminBtn').onclick = () => {
+            renderAdminLogin();
+        };
+    }
+
+    // ------------------- صفحة الإنجازات (بعد تسجيل الدخول العادي) -------------------
+    function renderPortfolio() {
+        appDiv.innerHTML = `
+            <div class="header">
+                <h1>🏆 أنس فاروق - مطور ويب ومصمم ألعاب</h1>
+                <div>
+                    <button class="admin-btn" id="adminPortalBtn">👑 لوحة المشرف</button>
+                    <button class="logout-btn" id="logoutBtn">🚪 تسجيل خروج</button>
+                </div>
+            </div>
+
+            <div class="section-title">🛠️ المهارات والتقنيات</div>
+            <div class="skills-grid">
+                <div class="card"><h3>HTML5 & CSS3</h3><p>تصميم واجهات حديثة ومتجاوبة</p></div>
+                <div class="card"><h3>JavaScript</h3><p>تفاعلات متقدمة وألعاب سلسة</p></div>
+                <div class="card"><h3>تطوير الألعاب</h3><p>ألعاب Canvas، Tower Defense، ذاكرة، ألغاز</p></div>
+                <div class="card"><h3>تصميم متجاوب</h3><p>جوال، حاسوب، جهاز لوحي</p></div>
+                <div class="card"><h3>LocalStorage & APIs</h3><p>تخزين البيانات، واجهات برمجية</p></div>
+                <div class="card"><h3>UI/UX</h3><p>تجربة مستخدم جذابة</p></div>
+            </div>
+
+            <div class="section-title">🚀 أبرز المشاريع</div>
+            <div class="projects-grid">
+                <div class="card"><h3>🎲 لعبة البنج الناطقة</h3><p>عداد دائري، أوامر صوتية، إحصائيات فوز.</p><div class="badge">ذكاء اصطناعي صوتي</div></div>
+                <div class="card"><h3>🏰 Tower Defense</h3><p>أبراج متعددة، موجات أعداء، نظام عملات.</p><div class="badge">استراتيجي</div></div>
+                <div class="card"><h3>🧠 لعبة الذاكرة</h3><p>بطاقات تفاعلية، مؤقت، تصميم ثلاثي الأبعاد.</p><div class="badge">تحدي عقلي</div></div>
+                <div class="card"><h3>📘 منصة تعليمية (رياضيات)</h3><p>شرح مبسط، اختبارات تفاعلية.</p><div class="badge">تعليمي</div></div>
+                <div class="card"><h3>🔐 مشفر الرسائل AES-256</h3><p>تطبيق ويب لتشفير النصوص.</p><div class="badge">أمن سيبراني</div></div>
+                <div class="card"><h3>🌍 مترجم عالمي (API)</h3><p>ترجمة فورية بين أكثر من 100 لغة.</p><div class="badge">ذكاء اصطناعي</div></div>
+            </div>
+
+            <div class="contact">
+                📧 amfarouk010@gmail.com &nbsp;|&nbsp; 🔗 github.com/anasfarouk
+            </div>
+            <footer>✨ جميع المشاريع تم تطويرها بواسطة أنس فاروق ✨</footer>
+        `;
+
+        document.getElementById('logoutBtn').onclick = async () => {
+            await fetch('/logout');
+            window.location.reload();
+        };
+        document.getElementById('adminPortalBtn').onclick = () => {
+            renderAdminLogin();
+        };
+    }
+
+    // ------------------- شاشة إدخال كلمة مرور المشرف -------------------
+    function renderAdminLogin() {
+        appDiv.innerHTML = `
+            <div class="auth-box">
+                <h1 style="text-align:center; color:#ffdd99;">👑 لوحة المشرفين</h1>
+                <div class="form-group"><input type="password" id="adminPass" placeholder="كلمة مرور المشرف"></div>
+                <button id="submitAdminBtn">دخول</button>
+                <div id="adminLoginMsg" class="message"></div>
+                <div style="text-align:center; margin-top:20px;">
+                    <button id="backBtn" style="background:#555;">↩️ رجوع</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('submitAdminBtn').onclick = async () => {
+            const pass = document.getElementById('adminPass').value.trim();
+            if (!pass) return;
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
+            });
+            const data = await res.json();
+            if (data.success) {
+                adminLoggedIn = true;
+                renderAdminPanel();
+            } else {
+                const msgDiv = document.getElementById('adminLoginMsg');
+                msgDiv.innerHTML = '<span style="color:#ffaaaa;">كلمة مرور خاطئة</span>';
+                setTimeout(() => msgDiv.innerHTML = '', 2000);
+            }
+        };
+        document.getElementById('backBtn').onclick = () => {
+            if (loggedInUser) renderPortfolio();
+            else renderAuth();
+        };
+    }
+
+    // ------------------- لوحة المشرف (عرض المستخدمين) -------------------
+    async function renderAdminPanel() {
+        appDiv.innerHTML = `
+            <div class="header">
+                <h1>👑 لوحة تحكم المشرفين</h1>
+                <button id="adminLogoutBtn" class="logout-btn">تسجيل خروج المشرف</button>
+            </div>
+            <div id="usersTableDiv" style="text-align:center;">⏳ جاري تحميل البيانات...</div>
+            <div style="text-align:center; margin-top:20px;">
+                <button id="refreshAdminBtn">🔄 تحديث</button>
+                <button id="backToPortfolioBtn" style="background:#555;">🏠 العودة للرئيسية</button>
+            </div>
+        `;
+
+        async function loadUsers() {
+            const res = await fetch('/api/admin/users');
+            if (res.status === 403) {
+                document.getElementById('usersTableDiv').innerHTML = '<p style="color:#ffaaaa;">انتهت الصلاحية، أعد تسجيل الدخول كمشرف</p>';
+                return;
+            }
+            const users = await res.json();
+            if (users.length === 0) {
+                document.getElementById('usersTableDiv').innerHTML = '<p>لا يوجد مستخدمون مسجلون</p>';
+                return;
+            }
+            let html = `<table><thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>تاريخ التسجيل</th></tr></thead><tbody>`;
+            users.forEach(u => {
+                html += `<tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td>${new Date(u.timestamp).toLocaleString()}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('usersTableDiv').innerHTML = html;
+        }
+
+        await loadUsers();
+
+        document.getElementById('adminLogoutBtn').onclick = async () => {
+            await fetch('/api/admin/logout');
+            adminLoggedIn = false;
+            if (loggedInUser) renderPortfolio();
+            else renderAuth();
+        };
+        document.getElementById('refreshAdminBtn').onclick = loadUsers;
+        document.getElementById('backToPortfolioBtn').onclick = () => {
+            if (loggedInUser) renderPortfolio();
+            else renderAuth();
+        };
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // ------------------- التحقق من حالة الجلسة واختيار الواجهة -------------------
+    async function checkSessionAndRender() {
+        try {
+            const res = await fetch('/api/check-session');
+            const data = await res.json();
+            if (data.loggedIn) {
+                loggedInUser = data.user;
+                // نتحقق أيضاً من جلسة المشرف (إذا كانت موجودة)
+                const adminRes = await fetch('/api/admin/users').catch(() => null);
+                if (adminRes && adminRes.status === 200) adminLoggedIn = true;
+                else adminLoggedIn = false;
+                renderPortfolio();
+            } else {
+                loggedInUser = null;
+                adminLoggedIn = false;
+                renderAuth();
+            }
+        } catch(e) {
+            renderAuth();
+        }
+    }
+
+    checkSessionAndRender();
+</script>
+</body>
+</html>
